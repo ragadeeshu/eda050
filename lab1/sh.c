@@ -159,7 +159,7 @@ void error(char *fmt, ...)
 }
 
 /* run_program: fork and exec a program. */
-void run_program(char** argv, int argc, bool foreground, bool doing_pipe, int** pipe_fd)
+void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 {
 	/* you need to fork, search for the command in argv[0],
 	* setup stdin and stdout of the child process, execv it.
@@ -176,70 +176,59 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe, int** 
 	*
 	*
 	*/
-	int i;
-	// // printf("%s\n", argv[argc]);
+
 	// printf("%s\n", argv[argc]);
-	for( i = 0; i<argc; ++i){
+	// for( i = 0; i<argc; ++i){
 		// for( i = argc - 1; i>=0; --i){
-		pipe(pipe_fd);
-		printf("%s\n", argv[i]);
-		pid_t cPID = fork();
+		// pipe(pipe_fd);
+		// printf("%s\n", argv[i]);
+	pid_t cPID = fork();
 
-		if(cPID){
-			int returnStatus;
+	if(cPID){
+		int returnStatus;
+		if(foreground || doing_pipe){
+			waitpid(cPID, &returnStatus, 0);
 
-			if(doing_pipe){
-			// close(pipe_fd[0]);
-				waitpid(cPID, &returnStatus, 0);
-				close(pipe_fd[1]);
-				dup2(pipe_fd[0], 0);
-			} else if(foreground){
-				waitpid(cPID, &returnStatus, 0);
-
-				if (returnStatus == 0) {
-					printf("Child died happily of old age.\n");
-				} else {
-					printf("Child died abnormally.\n");
-				}
-			} else{
-				printf("%s\n",  "Not waiting for child. Got life insurance.");
+			if (returnStatus == 0) {
+				printf("Child died happily of old age.\n");
+			} else {
+				printf("Child died abnormally.\n");
 			}
-		} else {
-			char fullpath[80];
-			list_t* current = path_dir_list;
-			printf("I am the child. Hello word!\n");
+		} else{
+			printf("%s\n",  "Not waiting for child. Got life insurance.");
+		}
+	} else {
+		char fullpath[80];
+		list_t* current = path_dir_list;
+		printf("I am the child. Hello word!\n");
 
-			do{
-				strcpy(fullpath, current->data);
-				strcat(fullpath, "/") ;
-				strcat(fullpath, argv[i]);
+		do{
+			strcpy(fullpath, current->data);
+			strcat(fullpath, "/") ;
+			strcat(fullpath, argv[0]);
 
-				printf("Searching in ");printf(fullpath);printf("\n");
-				if(!access(fullpath, X_OK)){
+			printf("Searching in ");printf(fullpath);printf("\n");
+			if(!access(fullpath, X_OK)){
 				// printf("Found Waldo!");
 
 
 				// printf("ifd ");printf(input_fd);printf("\n");
 				// printf("ofd ");printf(output_fd);printf("\n");
-					if(doing_pipe){
-					close(pipe_fd[0]);
-						dup2(pipe_fd[1], 1);
-					// close(pipe_fd[0]);
-					}else{
-						dup2(input_fd, 0);
-						dup2(output_fd, 1);
-					}
-					execv(fullpath, argv);
+				
+					dup2(input_fd, 0);
+					dup2(output_fd, 1);
+				
+				execv(fullpath, argv);
 
-				}
-				current = current->succ;
-			} while(current != path_dir_list);
-			if(current == path_dir_list){
-				exit(1);
 			}
-			exit(0);
+			current = current->succ;
+		} while(current != path_dir_list);
+		if(current == path_dir_list){
+			exit(1);
 		}
+		exit(0);
 	}
+	// }
 }
 
 void parse_line(void)
@@ -299,6 +288,7 @@ void parse_line(void)
 			case PIPE:
 			doing_pipe = true;
 			pipe(pipe_fd);
+			output_fd=pipe_fd[1];
 
 			/*FALLTHROUGH*/
 
@@ -315,11 +305,16 @@ void parse_line(void)
 
 			argv[argc] = NULL;
 
-			run_program(argv, argc, foreground, doing_pipe, pipe_fd);
+			run_program(argv, argc, foreground, doing_pipe);
 
 			input_fd	= 0;
-			output_fd	= 0;
+			output_fd	= 1;
 			argc		= 0;
+
+			if(doing_pipe){
+				input_fd = pipe_fd[0];
+				close(pipe_fd[1]);
+			}
 
 			if (type == NEWLINE)
 				return;
