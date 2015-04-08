@@ -55,10 +55,10 @@ int fetch_line(char* prompt)
 		c = getchar();
 
 		if (c == EOF)
-		return EOF;
+			return EOF;
 
 		if (count < MAXBUF)
-		input_buf[count++] = c;
+			input_buf[count++] = c;
 
 		if (c == '\n' && count < MAXBUF) {
 			input_buf[count] = 0;
@@ -101,7 +101,7 @@ int gettoken(char** outptr)
 	*outptr = token;
 
 	while (*input_char == ' '|| *input_char == '\t')
-	input_char++;
+		input_char++;
 
 	*token++ = *input_char;
 
@@ -130,7 +130,7 @@ int gettoken(char** outptr)
 		type = NORMAL;
 
 		while (!end_of_token(*input_char))
-		*token++ = *input_char++;
+			*token++ = *input_char++;
 	}
 
 	*token++ = 0; /* null-terminate the string. */
@@ -187,19 +187,25 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 		} else {
 			printf("Child died abnormally.\n");
 		}
-		exit(0);
 	} else {
+		char fullpath[80];
 		printf("I am the child. Hello word!\n");
-		printf(path_dir_list->data);
-		printf(path_dir_list->succ->data);
-		printf(path_dir_list->succ->succ->data);
+		list_t* current = path_dir_list;
 
-		char path[1024] ; 
-		strcpy( path, argv[1] );
-		strcat( path, "/" ) ;
-		strcat( path, ep->d_name);
+		do{
+			strcpy(fullpath, current->data);
+			strcat(fullpath, "/") ;
+			strcat(fullpath, argv[0]);
 
-		execv(argv[0], argv);
+			printf("Searching in ");printf(fullpath);printf("\n");
+			if(!access(fullpath, X_OK)){
+				printf("Found Waldo!");
+				execv(fullpath, argv);
+			}
+			current = current->succ;
+		} while(current != path_dir_list);
+
+		
 		exit(0);
 	}
 }
@@ -233,14 +239,14 @@ void parse_line(void)
 			type = gettoken(&argv[argc]);
 			if (type != NORMAL) {
 				error("expected file name: but found %s",
-				argv[argc]);
+					argv[argc]);
 				return;
 			}
 
 			input_fd = open(argv[argc], O_RDONLY);
 
 			if (input_fd < 0)
-			error("cannot read from %s", argv[argc]);
+				error("cannot read from %s", argv[argc]);
 
 			break;
 
@@ -248,14 +254,14 @@ void parse_line(void)
 			type = gettoken(&argv[argc]);
 			if (type != NORMAL) {
 				error("expected file name: but found %s",
-				argv[argc]);
+					argv[argc]);
 				return;
 			}
 
 			output_fd = open(argv[argc], O_CREAT | O_WRONLY, PERM);
 
 			if (output_fd < 0)
-			error("cannot write to %s", argv[argc]);
+				error("cannot write to %s", argv[argc]);
 			break;
 
 			case PIPE:
@@ -272,7 +278,7 @@ void parse_line(void)
 			case SEMICOLON:
 
 			if (argc == 0)
-			return;
+				return;
 
 			argv[argc] = NULL;
 
@@ -283,7 +289,7 @@ void parse_line(void)
 			argc		= 0;
 
 			if (type == NEWLINE)
-			return;
+				return;
 
 			break;
 		}
@@ -327,11 +333,11 @@ static void init_search_path(void)
 	while (proceed) {
 		s = dir_start;
 		while (*s != ':' && *s != 0)
-		s++;
+			s++;
 		if (*s == ':')
-		*s = 0;
+			*s = 0;
 		else
-		proceed = false;
+			proceed = false;
 
 		insert_last(&path_dir_list, dir_start);
 
@@ -341,7 +347,7 @@ static void init_search_path(void)
 	p = path_dir_list;
 
 	if (p == NULL)
-	return;
+		return;
 
 	#if 0
 	do {
@@ -359,7 +365,7 @@ int main(int argc, char** argv)
 	init_search_path();
 
 	while (fetch_line("% ") != EOF)
-	parse_line();
+		parse_line();
 
 	return 0;
 }
