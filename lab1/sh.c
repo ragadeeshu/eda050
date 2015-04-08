@@ -16,7 +16,7 @@
 #define MAXBUF		(512)		/* max length of input line. */
 #define MAX_ARG		(100)		/* max number of cmd line arguments. */
 
-typedef enum { 
+typedef enum {
 	AMPERSAND, 			/* & */
 	NEWLINE,			/* end of line reached. */
 	NORMAL,				/* file name or command option. */
@@ -113,19 +113,19 @@ int gettoken(char** outptr)
 	case '<':
 		type = INPUT;
 		break;
-	
+
 	case '>':
 		type = OUTPUT;
 		break;
-	
+
 	case '&':
 		type = AMPERSAND;
 		break;
-	
+
 	case '|':
-		type = PIPE; 
+		type = PIPE;
 		break;
-	
+
 	default:
 		type = NORMAL;
 
@@ -134,7 +134,7 @@ int gettoken(char** outptr)
 	}
 
 	*token++ = 0; /* null-terminate the string. */
-	
+
 	return type;
 }
 
@@ -168,14 +168,35 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 	 * is true then basically you should wait but when we are
 	 * running a command in a pipe such as PROG1 | PROG2 you might
 	 * not want to wait for each of PROG1 and PROG2...
-	 * 
+	 *
 	 * hints:
 	 *  snprintf is useful for constructing strings.
-	 *  access is useful for checking wether a path refers to an 
+	 *  access is useful for checking wether a path refers to an
 	 *      executable program.
-	 * 
-	 * 
+	 *
+	 *
 	 */
+	pid_t cPID = fork();
+
+	if(cPID){
+		int returnStatus;
+    waitpid(cPID, &returnStatus, 0);
+
+		if (returnStatus == 0) {
+       printf("Child died happily of old age.\n");
+    } else {
+			printf("Child died abnormally.\n");
+    }
+		exit(0);
+	} else {
+		printf("I am the child. Hello word!\n");
+		printf(path_dir_list->data);
+		printf(path_dir_list->succ->data);
+		printf(path_dir_list->succ->succ->data);
+
+		execv(argv[0], argv);
+		exit(0);
+	}
 }
 
 void parse_line(void)
@@ -192,7 +213,7 @@ void parse_line(void)
 	argc		= 0;
 
 	for (;;) {
-			
+
 		foreground	= true;
 		doing_pipe	= false;
 
@@ -206,7 +227,7 @@ void parse_line(void)
 		case INPUT:
 			type = gettoken(&argv[argc]);
 			if (type != NORMAL) {
-				error("expected file name: but found %s", 
+				error("expected file name: but found %s",
 					argv[argc]);
 				return;
 			}
@@ -221,7 +242,7 @@ void parse_line(void)
 		case OUTPUT:
 			type = gettoken(&argv[argc]);
 			if (type != NORMAL) {
-				error("expected file name: but found %s", 
+				error("expected file name: but found %s",
 					argv[argc]);
 				return;
 			}
@@ -247,7 +268,7 @@ void parse_line(void)
 
 			if (argc == 0)
 				return;
-						
+
 			argv[argc] = NULL;
 
 			run_program(argv, argc, foreground, doing_pipe);
@@ -275,8 +296,8 @@ static void init_search_path(void)
 
 	path = getenv("PATH");
 
-	/* path may look like "/bin:/usr/bin:/usr/local/bin" 
-	 * and this function makes a list with strings 
+	/* path may look like "/bin:/usr/bin:/usr/local/bin"
+	 * and this function makes a list with strings
 	 * "/bin" "usr/bin" "usr/local/bin"
  	 *
 	 */
@@ -320,7 +341,7 @@ static void init_search_path(void)
 #if 0
 	do {
 		printf("%s\n", (char*)p->data);
-		p = p->succ;	
+		p = p->succ;
 	} while (p != path_dir_list);
 #endif
 }
@@ -330,7 +351,7 @@ int main(int argc, char** argv)
 {
 	progname = argv[0];
 
-	init_search_path();	
+	init_search_path();
 
 	while (fetch_line("% ") != EOF)
 		parse_line();
