@@ -55,10 +55,10 @@ int fetch_line(char* prompt)
 		c = getchar();
 
 		if (c == EOF)
-			return EOF;
+		return EOF;
 
 		if (count < MAXBUF)
-			input_buf[count++] = c;
+		input_buf[count++] = c;
 
 		if (c == '\n' && count < MAXBUF) {
 			input_buf[count] = 0;
@@ -77,18 +77,18 @@ int fetch_line(char* prompt)
 static bool end_of_token(char c)
 {
 	switch (c) {
-	case 0:
-	case ' ':
-	case '\t':
-	case '\n':
-	case ';':
-	case '|':
-	case '&':
-	case '<':
-	case '>':
+		case 0:
+		case ' ':
+		case '\t':
+		case '\n':
+		case ';':
+		case '|':
+		case '&':
+		case '<':
+		case '>':
 		return true;
 
-	default:
+		default:
 		return false;
 	}
 }
@@ -101,36 +101,36 @@ int gettoken(char** outptr)
 	*outptr = token;
 
 	while (*input_char == ' '|| *input_char == '\t')
-		input_char++;
+	input_char++;
 
 	*token++ = *input_char;
 
 	switch (*input_char++) {
-	case '\n':
+		case '\n':
 		type = NEWLINE;
 		break;
 
-	case '<':
+		case '<':
 		type = INPUT;
 		break;
 
-	case '>':
+		case '>':
 		type = OUTPUT;
 		break;
 
-	case '&':
+		case '&':
 		type = AMPERSAND;
 		break;
 
-	case '|':
+		case '|':
 		type = PIPE;
 		break;
 
-	default:
+		default:
 		type = NORMAL;
 
 		while (!end_of_token(*input_char))
-			*token++ = *input_char++;
+		*token++ = *input_char++;
 	}
 
 	*token++ = 0; /* null-terminate the string. */
@@ -154,7 +154,7 @@ void error(char *fmt, ...)
 		fprintf(stderr, ": ");
 		perror(0);
 	} else
-		fputc('\n', stderr);
+	fputc('\n', stderr);
 
 }
 
@@ -162,37 +162,42 @@ void error(char *fmt, ...)
 void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 {
 	/* you need to fork, search for the command in argv[0],
-         * setup stdin and stdout of the child process, execv it.
-         * the parent should sometimes wait and sometimes not wait for
-	 * the child process (you must figure out when). if foreground
-	 * is true then basically you should wait but when we are
-	 * running a command in a pipe such as PROG1 | PROG2 you might
-	 * not want to wait for each of PROG1 and PROG2...
-	 *
-	 * hints:
-	 *  snprintf is useful for constructing strings.
-	 *  access is useful for checking wether a path refers to an
-	 *      executable program.
-	 *
-	 *
-	 */
+	* setup stdin and stdout of the child process, execv it.
+	* the parent should sometimes wait and sometimes not wait for
+	* the child process (you must figure out when). if foreground
+	* is true then basically you should wait but when we are
+	* running a command in a pipe such as PROG1 | PROG2 you might
+	* not want to wait for each of PROG1 and PROG2...
+	*
+	* hints:
+	*  snprintf is useful for constructing strings.
+	*  access is useful for checking wether a path refers to an
+	*      executable program.
+	*
+	*
+	*/
 	pid_t cPID = fork();
 
 	if(cPID){
 		int returnStatus;
-    waitpid(cPID, &returnStatus, 0);
+		waitpid(cPID, &returnStatus, 0);
 
 		if (returnStatus == 0) {
-       printf("Child died happily of old age.\n");
-    } else {
+			printf("Child died happily of old age.\n");
+		} else {
 			printf("Child died abnormally.\n");
-    }
+		}
 		exit(0);
 	} else {
 		printf("I am the child. Hello word!\n");
 		printf(path_dir_list->data);
 		printf(path_dir_list->succ->data);
 		printf(path_dir_list->succ->succ->data);
+
+		char path[1024] ; 
+		strcpy( path, argv[1] );
+		strcat( path, "/" ) ;
+		strcat( path, ep->d_name);
 
 		execv(argv[0], argv);
 		exit(0);
@@ -220,54 +225,54 @@ void parse_line(void)
 		type = gettoken(&argv[argc]);
 
 		switch (type) {
-		case NORMAL:
+			case NORMAL:
 			argc += 1;
 			break;
 
-		case INPUT:
+			case INPUT:
 			type = gettoken(&argv[argc]);
 			if (type != NORMAL) {
 				error("expected file name: but found %s",
-					argv[argc]);
+				argv[argc]);
 				return;
 			}
 
 			input_fd = open(argv[argc], O_RDONLY);
 
 			if (input_fd < 0)
-				error("cannot read from %s", argv[argc]);
+			error("cannot read from %s", argv[argc]);
 
 			break;
 
-		case OUTPUT:
+			case OUTPUT:
 			type = gettoken(&argv[argc]);
 			if (type != NORMAL) {
 				error("expected file name: but found %s",
-					argv[argc]);
+				argv[argc]);
 				return;
 			}
 
 			output_fd = open(argv[argc], O_CREAT | O_WRONLY, PERM);
 
 			if (output_fd < 0)
-				error("cannot write to %s", argv[argc]);
+			error("cannot write to %s", argv[argc]);
 			break;
 
-		case PIPE:
+			case PIPE:
 			doing_pipe = true;
 
 			/*FALLTHROUGH*/
 
-		case AMPERSAND:
+			case AMPERSAND:
 			foreground = false;
 
 			/*FALLTHROUGH*/
 
-		case NEWLINE:
-		case SEMICOLON:
+			case NEWLINE:
+			case SEMICOLON:
 
 			if (argc == 0)
-				return;
+			return;
 
 			argv[argc] = NULL;
 
@@ -278,7 +283,7 @@ void parse_line(void)
 			argc		= 0;
 
 			if (type == NEWLINE)
-				return;
+			return;
 
 			break;
 		}
@@ -297,10 +302,10 @@ static void init_search_path(void)
 	path = getenv("PATH");
 
 	/* path may look like "/bin:/usr/bin:/usr/local/bin"
-	 * and this function makes a list with strings
-	 * "/bin" "usr/bin" "usr/local/bin"
- 	 *
-	 */
+	* and this function makes a list with strings
+	* "/bin" "usr/bin" "usr/local/bin"
+	*
+	*/
 
 	dir_start = malloc(1+strlen(path));
 	if (dir_start == NULL) {
@@ -322,11 +327,11 @@ static void init_search_path(void)
 	while (proceed) {
 		s = dir_start;
 		while (*s != ':' && *s != 0)
-			s++;
+		s++;
 		if (*s == ':')
-			*s = 0;
+		*s = 0;
 		else
-			proceed = false;
+		proceed = false;
 
 		insert_last(&path_dir_list, dir_start);
 
@@ -336,14 +341,14 @@ static void init_search_path(void)
 	p = path_dir_list;
 
 	if (p == NULL)
-		return;
+	return;
 
-#if 0
+	#if 0
 	do {
 		printf("%s\n", (char*)p->data);
 		p = p->succ;
 	} while (p != path_dir_list);
-#endif
+	#endif
 }
 
 /* main: main program of simple shell. */
@@ -354,7 +359,7 @@ int main(int argc, char** argv)
 	init_search_path();
 
 	while (fetch_line("% ") != EOF)
-		parse_line();
+	parse_line();
 
 	return 0;
 }
