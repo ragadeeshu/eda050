@@ -204,8 +204,9 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 			}
 			current = current->succ;
 		} while(current != path_dir_list);
-
-		
+		if(current == path_dir_list){
+			exit(1);
+		}
 		exit(0);
 	}
 }
