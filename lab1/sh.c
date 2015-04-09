@@ -177,11 +177,6 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 	*
 	*/
 
-	// printf("%s\n", argv[argc]);
-	// for( i = 0; i<argc; ++i){
-		// for( i = argc - 1; i>=0; --i){
-		// pipe(pipe_fd);
-		// printf("%s\n", argv[i]);
 	pid_t cPID = fork();
 
 	if(cPID){
@@ -207,13 +202,8 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 			strcat(fullpath, "/") ;
 			strcat(fullpath, argv[0]);
 
-			printf("Searching in ");printf(fullpath);printf("\n");
+		/*	printf("Searching in ");printf(fullpath);printf("\n");*/
 			if(!access(fullpath, X_OK)){
-				// printf("Found Waldo!");
-
-
-				// printf("ifd ");printf(input_fd);printf("\n");
-				// printf("ofd ");printf(output_fd);printf("\n");
 
 					dup2(input_fd, 0);
 					dup2(output_fd, 1);
@@ -228,7 +218,6 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 		}
 		exit(0);
 	}
-	// }
 }
 
 void parse_line(void)
