@@ -186,7 +186,7 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 
 	if(cPID){
 		int returnStatus;
-		if(foreground || doing_pipe){
+		if(foreground){
 			waitpid(cPID, &returnStatus, 0);
 
 			if (returnStatus == 0) {
@@ -214,10 +214,10 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 
 				// printf("ifd ");printf(input_fd);printf("\n");
 				// printf("ofd ");printf(output_fd);printf("\n");
-				
+
 					dup2(input_fd, 0);
 					dup2(output_fd, 1);
-				
+
 				execv(fullpath, argv);
 
 			}
