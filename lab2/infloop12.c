@@ -4,9 +4,6 @@
 #include <string.h>
 
 int main() {
-	sigset_t fullset;
-	sigfillset(&fullset);
-
 	sigset_t blockset;
 	sigemptyset(&blockset);
 	sigaddset(&blockset, SIGUSR1);
