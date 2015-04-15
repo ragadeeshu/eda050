@@ -1,6 +1,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 int main() {
 	sigset_t fullset;
@@ -10,6 +11,7 @@ int main() {
 	sigemptyset(&blockset);
 	sigaddset(&blockset, SIGUSR1);
 	sigaddset(&blockset, SIGTSTP); // ^Z
+	sigaddset(&blockset, SIGINT); // ^Z
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
 
 	sigset_t pendset;
@@ -22,6 +24,10 @@ int main() {
     printf("...leaving loop\n");
 
     sigpending(&pendset);
-    if(sigismember(&pendset, SIGTSTP))
-    	printf("SUSPEND\n");
+
+    int sig;
+    for(sig = 0; sig < NSIG; sig++){
+    	if(sigismember(&pendset, sig))
+    		printf("Blocked signal: %s\n", strsignal(sig));
+    }
 }
