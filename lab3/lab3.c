@@ -6,13 +6,13 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define NREG		(32)	
-#define PAGESIZE_WIDTH	(2)	
-#define PAGESIZE	(1<<PAGESIZE_WIDTH)	
+#define NREG		(32)
+#define PAGESIZE_WIDTH	(2)
+#define PAGESIZE	(1<<PAGESIZE_WIDTH)
 #define NPAGES		(2048)
-#define RAM_PAGES	(8)	
+#define RAM_PAGES	(8)
 #define RAM_SIZE	(RAM_PAGES * PAGESIZE)
-#define SWAP_PAGES	(128)	
+#define SWAP_PAGES	(128)
 #define SWAP_SIZE	(SWAP_PAGES * PAGESIZE)
 #undef DEBUG
 
@@ -27,14 +27,15 @@
 #define BF      (8)
 #define BA      (9)
 #define ST      (10)
-#define LD      (11)  
+#define LD      (11)
 #define CALL	(12)
 #define JMP	(13)
 #define MUL	(14)
 #define SEQI	(15)
 #define HALT    (16)
 
-char*	mnemonics[] = { 
+
+char*	mnemonics[] = {
 	[ADD] = "add",
 	[ADDI] = "addi",
 	[SUB] = "sub",
@@ -73,6 +74,7 @@ typedef struct {
 	unsigned		page;	/* Swap page of page if assigned. */
 } coremap_entry_t;
 
+static unsigned int nextPage;
 static unsigned long long	num_pagefault;		/* Statistics. */
 static page_table_entry_t	page_table[NPAGES];	/* OS data structure. */
 static coremap_entry_t		coremap[RAM_PAGES];	/* OS data structure. */
@@ -118,15 +120,15 @@ void error(char* fmt, ...)
 
 static void read_page(unsigned phys_page, unsigned swap_page)
 {
-	memcpy(&memory[phys_page * PAGESIZE], 
-		&swap[swap_page * PAGESIZE], 
+	memcpy(&memory[phys_page * PAGESIZE],
+		&swap[swap_page * PAGESIZE],
 		PAGESIZE * sizeof(unsigned));
 }
 
 static void write_page(unsigned phys_page, unsigned swap_page)
 {
-	memcpy(&swap[swap_page * PAGESIZE], 
-		&memory[phys_page * PAGESIZE], 
+	memcpy(&swap[swap_page * PAGESIZE],
+		&memory[phys_page * PAGESIZE],
 		PAGESIZE * sizeof(unsigned));
 }
 
@@ -141,18 +143,22 @@ static unsigned new_swap_page()
 
 static unsigned fifo_page_replace()
 {
-	int	page;
-	
-	page = INT_MAX; 
+	++nextPage%=RAM_PAGES;
 
-	assert(page < RAM_PAGES);
+	// page = INT_MAX;
+
+	assert(nextPage < RAM_PAGES);
+
+	pageCounter;
+
+	
 }
 
 static unsigned second_chance_replace()
 {
 	int	page;
-	
-	page = INT_MAX; 
+
+	page = INT_MAX;
 
 	assert(page < RAM_PAGES);
 }
@@ -255,7 +261,7 @@ void read_program(char* file, unsigned memory[], int* ninstr)
 		write_memory(memory, line, make_instr(opcode, a, b, c));
 
 		line += 1;
-	} 
+	}
 
 	*ninstr = line;
 }
@@ -281,7 +287,7 @@ int run(int argc, char** argv)
 	bool		writeback;
 
 	if (argc > 1)
-		file = argv[1];	
+		file = argv[1];
 	else
 		file = "a.s";
 
@@ -318,47 +324,47 @@ int run(int argc, char** argv)
 			puts("ADD");
 			dest = source1 + source2;
 			break;
-			
+
 		case ADDI:
 			puts("ADDI");
 			dest = source1 + constant;
 			break;
-			
+
 		case SUB:
 			puts("SUB");
 			dest = source1 - source2;
 			break;
-			
+
 		case SUBI:
 			puts("SUBI");
 			dest = source1 - constant;
 			break;
-			
+
 		case MUL:
 			puts("MUL");
 			dest = source1 * source2;
 			break;
-			
+
 		case SGE:
 			puts("SGE");
 			dest = source1 >= source2;
 			break;
-			
+
 		case SGT:
 			puts("SGT");
 			dest = source1 > source2;
 			break;
-			
+
 		case SEQ:
 			puts("SEQ");
 			dest = source1 == source2;
 			break;
-			
+
 		case SEQI:
 			puts("SEQI");
 			dest = source1 == constant;
 			break;
-			
+
 		case BT:
 			puts("BT");
 			writeback = false;
@@ -367,7 +373,7 @@ int run(int argc, char** argv)
 				increment_pc = false;
 			}
 			break;
-				
+
 		case BF:
 			puts("BF");
 			writeback = false;
@@ -376,7 +382,7 @@ int run(int argc, char** argv)
 				increment_pc = false;
 			}
 			break;
-				
+
 		case BA:
 			puts("BA");
 			writeback = false;
@@ -418,12 +424,12 @@ int run(int argc, char** argv)
 			writeback = false;
 			proceed = false;
 			break;
-		
+
 		default:
-			error("illegal instruction at pc = %d: opcode = %d\n", 
+			error("illegal instruction at pc = %d: opcode = %d\n",
 				cpu.pc, opcode);
 		}
-			
+
 		if (writeback && dest_reg != 0)
 			cpu.reg[dest_reg] = dest;
 
@@ -451,7 +457,7 @@ int run(int argc, char** argv)
 			printf("R%02d = %-12d", i, cpu.reg[i]);
 		}
 		printf("\n");
-	
+
 
 	}
 	return 0;
