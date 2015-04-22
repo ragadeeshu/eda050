@@ -75,6 +75,8 @@ typedef struct {
 } coremap_entry_t;
 
 static unsigned long long	num_pagefault;		/* Statistics. */
+static unsigned long long	num_diskwrite;		/* Statistics. */
+
 static page_table_entry_t	page_table[NPAGES];	/* OS data structure. */
 static coremap_entry_t		coremap[RAM_PAGES];	/* OS data structure. */
 static unsigned			memory[RAM_SIZE];	/* Hardware: RAM. */
@@ -146,50 +148,96 @@ static unsigned fifo_page_replace()
 
 	nextPage=++nextPage % RAM_PAGES;
 
-	// page = INT_MAX;
-
 	assert(nextPage < RAM_PAGES);
 
-	// pageCounter;
-
-	
+	return nextPage;
 }
 
 static unsigned second_chance_replace()
 {
-	int	page;
+	static unsigned int nextPage=-1;
 
-	page = INT_MAX;
+	nextPage=++nextPage % RAM_PAGES;
 
-	assert(page < RAM_PAGES);
+	assert(nextPage < RAM_PAGES);
+	if(coremap[nextPage].owner != NULL && coremap[nextPage].owner->referenced){
+		coremap[nextPage].owner->referenced = 0;
+	}
+	printf("!!! SECOND CHANCE GAVE %d\n", nextPage);
+		nextPage = (*replace)();
+	return nextPage;
 }
+// static unsigned second_chance_replace()
+// {
+// 	static unsigned int nextPage=-1;
+// 	nextPage=++nextPage % RAM_PAGES;
+// 	while(coremap[nextPage].owner != NULL && coremap[nextPage].owner->referenced){
+// 		coremap[nextPage].owner->referenced = 0;
+// 		nextPage=++nextPage % RAM_PAGES;
+		
+// 	}
+// 	assert(nextPage < RAM_PAGES);
+// 	return nextPage;
+// }
 
 static unsigned take_phys_page()
 {
 	unsigned		page;	/* Page to be replaced. */
 
 	page = (*replace)();
+	printf("Took page number %d\n", page);
 
 	return page;
 }
 
 static void pagefault(unsigned virt_page)
 {
-	unsigned		page;
+	printf("\n");
+	printf("entered pagefault, want page %d\n", virt_page);
+	unsigned	page;
+	unsigned	swap_page;
 
 	num_pagefault += 1;
 
 	page = take_phys_page();
+	printf("took physpage\n");
 
-	if((*coremap[page].owner).ondisk){
-		if((*coremap[page].owner).modified){
-			write_page(page, coremap[page].page)
+	printf("hej: %d\n", coremap[page]);
+	if(coremap[page].owner!=NULL){
+		if(coremap[page].owner->modified){
+			if(coremap[page].owner->ondisk){
+				printf("!!!!modified is: %d\n",coremap[page].owner->modified );
+				printf("Trying to write modified page %d to disk\n", coremap[page].page);
+				write_page(page, coremap[page].page);
+				printf("wrote page\n");
+			}else{
+				swap_page = new_swap_page();
+				printf("Trying to wirte page %d to disk\n", swap_page);
+				write_page(page, swap_page);
+				printf("wrote page\n");
+				coremap[page].page = swap_page;
+			}
+			printf("wrote page to disk\n");
+			coremap[page].owner->ondisk = 1;
+			coremap[page].owner -> modified = 0;
+			num_diskwrite += 1;
 		}
-	}else{
-		// swap_page = ta ny swapsak
+		coremap[page].owner -> inmemory = 0;
+		coremap[page].owner -> page = coremap[page].page;
 	}
+	
 
-	// page_table[virt_page]
+	if(page_table[virt_page].ondisk){
+		printf("Trying to read page %d from disk\n", virt_page);
+		read_page(page, page_table[virt_page].page);
+		printf("read page from disk\n");
+	}
+	coremap[page].page = page_table[virt_page].page;
+	coremap[page].owner = &page_table[virt_page];
+	page_table[virt_page].inmemory = 1;
+	page_table[virt_page].page = page;
+	printf("Done with %d\n", virt_page);
+	printf("\n");
 }
 
 static void translate(unsigned virt_addr, unsigned* phys_addr, bool write)
@@ -205,8 +253,9 @@ static void translate(unsigned virt_addr, unsigned* phys_addr, bool write)
 
 	page_table[virt_page].referenced = 1;
 
-	if (write)
+	if (write){
 		page_table[virt_page].modified = 1;
+	}
 
 	*phys_addr = page_table[virt_page].page * PAGESIZE + offset;
 }
@@ -252,7 +301,7 @@ void read_program(char* file, unsigned memory[], int* ninstr)
 
 	while (fgets(buf, sizeof buf, in) != NULL) {
 		if (buf[0] == ';')
-			continue;
+		continue;
 
 		if (sscanf(buf, "%s %d,%d,%d", text, &a, &b, &c) != 4)
 			error("syntax error near: \"%s\"", buf);
@@ -331,52 +380,52 @@ int run(int argc, char** argv)
 		printf("pc = %3d: ", cpu.pc);
 
 		switch (opcode) {
-		case ADD:
+			case ADD:
 			puts("ADD");
 			dest = source1 + source2;
 			break;
 
-		case ADDI:
+			case ADDI:
 			puts("ADDI");
 			dest = source1 + constant;
 			break;
 
-		case SUB:
+			case SUB:
 			puts("SUB");
 			dest = source1 - source2;
 			break;
 
-		case SUBI:
+			case SUBI:
 			puts("SUBI");
 			dest = source1 - constant;
 			break;
 
-		case MUL:
+			case MUL:
 			puts("MUL");
 			dest = source1 * source2;
 			break;
 
-		case SGE:
+			case SGE:
 			puts("SGE");
 			dest = source1 >= source2;
 			break;
 
-		case SGT:
+			case SGT:
 			puts("SGT");
 			dest = source1 > source2;
 			break;
 
-		case SEQ:
+			case SEQ:
 			puts("SEQ");
 			dest = source1 == source2;
 			break;
 
-		case SEQI:
+			case SEQI:
 			puts("SEQI");
 			dest = source1 == constant;
 			break;
 
-		case BT:
+			case BT:
 			puts("BT");
 			writeback = false;
 			if (source1 != 0) {
@@ -385,7 +434,7 @@ int run(int argc, char** argv)
 			}
 			break;
 
-		case BF:
+			case BF:
 			puts("BF");
 			writeback = false;
 			if (source1 == 0) {
@@ -394,27 +443,27 @@ int run(int argc, char** argv)
 			}
 			break;
 
-		case BA:
+			case BA:
 			puts("BA");
 			writeback = false;
 			increment_pc = false;
 			cpu.pc = constant;
 			break;
 
-		case LD:
+			case LD:
 			puts("LD");
 			data = read_memory(memory, source1 + constant);
 			dest = data;
 			break;
 
-		case ST:
+			case ST:
 			puts("ST");
 			data = cpu.reg[dest_reg];
 			write_memory(memory, source1 + constant, data);
 			writeback = false;
 			break;
 
-		case CALL:
+			case CALL:
 			puts("CALL");
 			increment_pc = false;
 			dest = cpu.pc + 1;
@@ -422,21 +471,21 @@ int run(int argc, char** argv)
 			cpu.pc = constant;
 			break;
 
-		case JMP:
+			case JMP:
 			puts("JMP");
 			increment_pc = false;
 			writeback = false;
 			cpu.pc = source1;
 			break;
 
-		case HALT:
+			case HALT:
 			puts("HALT");
 			increment_pc = false;
 			writeback = false;
 			proceed = false;
 			break;
 
-		default:
+			default:
 			error("illegal instruction at pc = %d: opcode = %d\n",
 				cpu.pc, opcode);
 		}
@@ -476,7 +525,7 @@ int run(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-#if 1
+#if 0
 	replace = fifo_page_replace;
 #else
 	replace = second_chance_replace;
@@ -485,4 +534,5 @@ int main(int argc, char** argv)
 	run(argc, argv);
 
 	printf("%llu page faults\n", num_pagefault);
+	printf("%llu disk writes\n", num_diskwrite);
 }
