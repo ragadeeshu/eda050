@@ -23,7 +23,7 @@ int main() {
     sigpending(&pendset);
 
     int sig;
-    for(sig = 0; sig < NSIG; sig++){
+    for(sig = 1; sig < NSIG; sig++){
     	if(sigismember(&pendset, sig))
     		printf("Blocked signal: %s\n", strsignal(sig));
     }

@@ -74,7 +74,6 @@ typedef struct {
 	unsigned		page;	/* Swap page of page if assigned. */
 } coremap_entry_t;
 
-static unsigned int nextPage;
 static unsigned long long	num_pagefault;		/* Statistics. */
 static page_table_entry_t	page_table[NPAGES];	/* OS data structure. */
 static coremap_entry_t		coremap[RAM_PAGES];	/* OS data structure. */
@@ -143,13 +142,15 @@ static unsigned new_swap_page()
 
 static unsigned fifo_page_replace()
 {
-	++nextPage%=RAM_PAGES;
+	static unsigned int nextPage;
+
+	nextPage=++nextPage % RAM_PAGES;
 
 	// page = INT_MAX;
 
 	assert(nextPage < RAM_PAGES);
 
-	pageCounter;
+	// pageCounter;
 
 	
 }
@@ -179,6 +180,16 @@ static void pagefault(unsigned virt_page)
 	num_pagefault += 1;
 
 	page = take_phys_page();
+
+	if((*coremap[page].owner).ondisk){
+		if((*coremap[page].owner).modified){
+			write_page(page, coremap[page].page)
+		}
+	}else{
+		// swap_page = ta ny swapsak
+	}
+
+	// page_table[virt_page]
 }
 
 static void translate(unsigned virt_addr, unsigned* phys_addr, bool write)
